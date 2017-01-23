@@ -2,6 +2,8 @@ package org.timothyb89.lifx.net.android;
 
 import java.lang.reflect.Method;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  *
@@ -9,6 +11,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 @Slf4j
 public class WifiManagerProxy {
+	private static Logger log = LoggerFactory.getLogger(WifiManagerProxy.class);
 	
 	private final Object instance;
 	

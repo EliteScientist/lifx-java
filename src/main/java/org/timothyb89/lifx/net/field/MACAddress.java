@@ -25,17 +25,20 @@ public class MACAddress {
 	}
 	
 	public MACAddress() {
-		this(ByteBuffer.allocate(6));
+		this(ByteBuffer.allocate(8));
 	}
 	
 	private void createHex() {
 		bytes.rewind();
 		
 		List<String> byteStrings = new LinkedList<>();
-		while (bytes.hasRemaining()) {
+		
+		// Mac only uses 6 of the 8 bytes
+		for (int i = 0; i < 6; i++)
+		{
 			byteStrings.add(String.format("%02X", bytes.get()));
 		}
-		
+						
 		hex = StringUtils.join(byteStrings, ':');
 		
 		bytes.rewind();

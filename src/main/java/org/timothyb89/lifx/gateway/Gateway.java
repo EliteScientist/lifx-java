@@ -11,6 +11,8 @@ import java.util.concurrent.Future;
 import lombok.Getter;
 import lombok.ToString;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.timothyb89.eventbus.EventBus;
 import org.timothyb89.eventbus.EventBusClient;
 import org.timothyb89.eventbus.EventBusProvider;
@@ -23,8 +25,10 @@ import org.timothyb89.lifx.net.BroadcastListener;
 import org.timothyb89.lifx.net.PacketReceivedEvent;
 import org.timothyb89.lifx.net.field.MACAddress;
 import org.timothyb89.lifx.net.packet.Packet;
+import org.timothyb89.lifx.net.packet.request.GetGroupRequest;
 import org.timothyb89.lifx.net.packet.request.LightStatusRequest;
 import org.timothyb89.lifx.net.packet.request.SetPowerStateRequest;
+import org.timothyb89.lifx.net.packet.response.GroupResponse;
 import org.timothyb89.lifx.net.packet.response.LightStatusResponse;
 
 /**
@@ -37,6 +41,7 @@ import org.timothyb89.lifx.net.packet.response.LightStatusResponse;
 @ToString(of = { "ipAddress", "port", "macAddress", "bulbs" })
 @EventScanMode(type = EventScanType.EXTENDED)
 public class Gateway implements EventBusProvider {
+	private static Logger log = LoggerFactory.getLogger(Gateway.class);
 	
 	@Getter private final BroadcastListener listener;
 	@Getter private final InetSocketAddress ipAddress;
@@ -79,9 +84,12 @@ public class Gateway implements EventBusProvider {
 		bus.register(this);
 		
 		// there's no connection process, so immediately start bulb discovery
-		try {
-			refreshBulbs();
-		} catch (IOException ex) {
+		try 
+		{
+			refreshBulbs(true);
+		} 
+		catch (IOException ex) 
+		{
 			log.warn("Unable to query gateway for bulbs", ex);
 		}
 	}
@@ -184,8 +192,16 @@ public class Gateway implements EventBusProvider {
 	 * {@link GatewayBulbDiscoveredEvent}s for any new bulb discovered.
 	 * @throws IOException on network error
 	 */
-	public void refreshBulbs() throws IOException {
+	public void refreshBulbs() throws IOException 
+	{
 		send(new LightStatusRequest());
+	}
+	
+	public void refreshBulbs(boolean firstTime)
+		throws IOException
+	{
+		send(new GetGroupRequest());
+		refreshBulbs();
 	}
 	
 	/**

@@ -1,6 +1,7 @@
 package org.timothyb89.lifx.bulb;
 
 import java.io.IOException;
+import java.util.Date;
 import lombok.Getter;
 import lombok.ToString;
 import org.timothyb89.eventbus.EventBus;
@@ -14,7 +15,9 @@ import org.timothyb89.lifx.net.field.MACAddress;
 import org.timothyb89.lifx.net.packet.Packet;
 import org.timothyb89.lifx.net.packet.request.SetDimAbsoluteRequest;
 import org.timothyb89.lifx.net.packet.request.SetLightColorRequest;
+import org.timothyb89.lifx.net.packet.request.SetLightPowerRequest;
 import org.timothyb89.lifx.net.packet.request.SetPowerStateRequest;
+import org.timothyb89.lifx.net.packet.response.GroupResponse;
 import org.timothyb89.lifx.net.packet.response.LightStatusResponse;
 import org.timothyb89.lifx.net.packet.response.PowerStateResponse;
 
@@ -25,7 +28,8 @@ import org.timothyb89.lifx.net.packet.response.PowerStateResponse;
  * @author timothyb89
  */
 @ToString(of = { "label", "address", "powerState" })
-public class Bulb implements EventBusProvider {
+public class Bulb implements EventBusProvider 
+{
 	
 	public static final long DEFAULT_FADE_TIME = 1000l;
 	
@@ -40,6 +44,9 @@ public class Bulb implements EventBusProvider {
 	@Getter private PowerState powerState;
 	@Getter private String label;
 	@Getter private long tags;
+	@Getter private String groupName;
+	@Getter private byte[] groupId;
+	@Getter private Date groupUpdated;
 
 	private final EventBus bus;
 	
@@ -98,6 +105,13 @@ public class Bulb implements EventBusProvider {
 		bus.push(new BulbPowerStateUpdatedEvent(this, powerState));
 	}
 	
+	public void valuesFromPacket(GroupResponse packet)
+	{
+		this.groupName		= packet.getLabel();
+		this.groupId		= packet.getGroupId();
+		this.groupUpdated	= packet.getUpdated();
+	}
+	
 	/**
 	 * Sends a packet to this bulb. Note that the {@code site} field will be set
 	 * to the address of this bulb. See {@link Gateway#send(Packet)} for more
@@ -122,6 +136,18 @@ public class Bulb implements EventBusProvider {
 	 */
 	public void setPowerState(PowerState state) throws IOException {
 		send(new SetPowerStateRequest(state));
+	}
+	
+	public void turnOn(long duration)
+		throws IOException
+	{
+		send(new SetLightPowerRequest(65535, duration));
+	}
+	
+	public void turnOff(long duration)
+		throws IOException
+	{
+		send(new SetLightPowerRequest(0, duration));
 	}
 	
 	/**
@@ -209,11 +235,21 @@ public class Bulb implements EventBusProvider {
 			return;
 		}
 		
-		if (p instanceof PowerStateResponse) {
+		if (p instanceof PowerStateResponse) 
+		{
 			PowerStateResponse resp = (PowerStateResponse) p;
 			valuesFromPacket(resp);
-		} else if (p instanceof LightStatusResponse) {
+		} 
+		else 
+		if (p instanceof LightStatusResponse) 
+		{
 			LightStatusResponse resp = (LightStatusResponse) p;
+			valuesFromPacket(resp);
+		}
+		else
+		if (p instanceof GroupResponse)
+		{
+			GroupResponse resp = (GroupResponse) p;
 			valuesFromPacket(resp);
 		}
 		

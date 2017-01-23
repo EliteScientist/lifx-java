@@ -23,13 +23,13 @@ public class SetPowerStateRequest extends Packet {
 	public SetPowerStateRequest() {
 		state = PowerState.OFF;
 		
-		protocol = 0x1400;
+		//protocol = 0x1400;
 	}
 	
 	public SetPowerStateRequest(PowerState state) {
 		this.state = state;
 		
-		protocol = 0x1400;
+		//protocol = 0x1400;
 	}
 	
 	@Override

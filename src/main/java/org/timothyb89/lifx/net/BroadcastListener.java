@@ -6,6 +6,8 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.DatagramChannel;
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.timothyb89.eventbus.EventBus;
 import org.timothyb89.eventbus.EventBusClient;
 import org.timothyb89.eventbus.EventBusProvider;
@@ -31,8 +33,10 @@ import org.timothyb89.lifx.net.packet.response.PANGatewayResponse;
 @Slf4j
 public class BroadcastListener implements EventBusProvider {
 	
+	private static Logger log = LoggerFactory.getLogger(BroadcastListener.class);
+	
 	public static final int BROADCAST_PORT = 56700;
-	public static final int BROADCAST_DELAY = 1000;
+	public static final int BROADCAST_DELAY = 10000;
 	
 	/**
 	 * The address used for broadcast packets, in this case the entire /0 subnet
@@ -170,7 +174,9 @@ public class BroadcastListener implements EventBusProvider {
 	 * @throws java.io.IOException
 	 */
 	public void broadcast(Packet packet)
-			throws ClosedChannelException, IOException {
+			throws ClosedChannelException, IOException 
+	{
+		packet.setTagged(true);
 		channel.send(packet.bytes(), BROADCAST_ADDRESS);
 	}
 	

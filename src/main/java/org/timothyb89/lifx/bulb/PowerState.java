@@ -1,16 +1,24 @@
 package org.timothyb89.lifx.bulb;
 
 import lombok.extern.slf4j.Slf4j;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * Represents bulb power states (on or off).
  * @author tim
  */
 @Slf4j
-public enum PowerState {
-	
+public enum PowerState {	
 	ON(0xFFFF),
 	OFF(0x0000);
+
+	private static Logger log = LoggerFactory.getLogger(PowerState.class);
+	
+	private PowerState()
+	{
+		this.value = 0;
+	}
 	
 	private final int value;
 	

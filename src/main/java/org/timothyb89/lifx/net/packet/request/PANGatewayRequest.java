@@ -18,6 +18,7 @@ public class PANGatewayRequest extends Packet {
 	public PANGatewayRequest() {
 		// v2.0 protocol uses default protocol in Packet
 		//protocol = PROTOCOL_DEFAULT;
+		this.tagged	= true;
 	}
 	
 	@Override

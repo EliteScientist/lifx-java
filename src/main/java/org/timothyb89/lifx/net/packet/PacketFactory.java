@@ -40,6 +40,7 @@ public class PacketFactory {
 		register(TagLabelsResponse.class);
 		register(TagsResponse.class);
 		register(WifiInfoResponse.class);
+		register(GroupResponse.class);
 	}
 	
 	/**

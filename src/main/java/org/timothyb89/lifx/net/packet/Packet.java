@@ -11,7 +11,8 @@ import org.timothyb89.lifx.net.field.Field;
 import org.timothyb89.lifx.net.field.MACAddress;
 import org.timothyb89.lifx.net.field.MACAddressField;
 import org.timothyb89.lifx.net.field.UInt16Field;
-import org.timothyb89.lifx.net.field.UInt64Field;
+import org.timothyb89.lifx.net.field.UInt32Field;
+import org.timothyb89.lifx.net.field.UInt8Field;
 
 /**
  * Represents an abstract packet, providing conversion functionality to and from
@@ -28,45 +29,65 @@ import org.timothyb89.lifx.net.field.UInt64Field;
  * @author tim
  */
 @ToString(of = { "packetType", "size", "bulbAddress" })
-public abstract class Packet {
-
-	public static final Field<Integer>    FIELD_SIZE         = new UInt16Field().little();
-	public static final Field<Integer>    FIELD_PROTOCOL     = new UInt16Field().little();
-	public static final Field<ByteBuffer> FIELD_RESERVED_1   = new ByteField(4);
-	public static final Field<MACAddress> FIELD_BULB_ADDRESS = new MACAddressField();
-	public static final Field<ByteBuffer> FIELD_RESERVED_2   = new ByteField(2);
-	public static final Field<MACAddress> FIELD_SITE         = new MACAddressField();
-	public static final Field<ByteBuffer> FIELD_RESERVED_3   = new ByteField(2);
-	public static final Field<Long>       FIELD_TIMESTAMP    = new UInt64Field();
+public abstract class Packet 
+{
+	// Frame
+	public static final Field<Integer>    FIELD_SIZE		= new UInt16Field().little();
+	public static final Field<Integer>    FIELD_PROTOCOL	= new UInt16Field().little();
+	public static final Field<Long>       FIELD_SOURCE		= new UInt32Field().little();
+		
+	// Frame Address
+	public static final Field<MACAddress> FIELD_TARGET		= new MACAddressField();
+	public static final Field<ByteBuffer> FIELD_RESERVED_1	= new ByteField(6);
+	public static final Field<Integer> FIELD_ACK_RESERVED	= new UInt8Field().little();
+	public static final Field<Integer> FIELD_SEQUENCE		= new UInt8Field().little();
+	
+	// Protocol Header
+	public static final Field<ByteBuffer> FIELD_RESERVED_3   = new ByteField(8);
 	public static final Field<Integer>    FIELD_PACKET_TYPE  = new UInt16Field().little();
 	public static final Field<ByteBuffer> FIELD_RESERVED_4   = new ByteField(2);
-	
+			
 	/**
 	 * An ordered array of all fields contained in the common packet preamble.
 	 */
-	public static final Field[] PREAMBLE_FIELDS = new Field[] {
-		FIELD_SIZE,
-		FIELD_PROTOCOL,
-		FIELD_RESERVED_1,
-		FIELD_BULB_ADDRESS,
-		FIELD_RESERVED_2,
-		FIELD_SITE,
-		FIELD_RESERVED_3,
-		FIELD_TIMESTAMP,
-		FIELD_PACKET_TYPE,
-		FIELD_RESERVED_4
-	};
+	public static final Field[] PREAMBLE_FIELDS = new Field[0]; //{
+//		FIELD_SIZE,
+//		FIELD_PROTOCOL,
+//		FIELD_RESERVED_1,
+//		FIELD_BULB_ADDRESS,
+//		FIELD_RESERVED_2,
+//		FIELD_SITE,
+//		FIELD_RESERVED_3,
+//		FIELD_TIMESTAMP,
+//		FIELD_PACKET_TYPE,
+//		FIELD_RESERVED_4
+//	};
 	
+	// Frame
 	@Getter protected int size;
-	@Getter protected int protocol;
+	@Getter protected int origin			= 0;
+	@Getter @Setter protected boolean tagged;
+	@Getter protected boolean addressable	= true;
+	@Getter @Setter protected int protocol	= 1024;
+	@Getter @Setter protected long source;
+	
+	// Frame Address
+	@Getter @Setter protected MACAddress target;
 	@Getter protected ByteBuffer reserved1;
-	@Getter @Setter protected MACAddress bulbAddress;
 	@Getter protected ByteBuffer reserved2;
-	@Getter @Setter protected MACAddress site;
+	@Getter @Setter protected boolean ack_required;
+	@Getter @Setter protected boolean res_required;
+	@Getter @Setter protected int sequence;
+	
+	// Protocol Header
 	@Getter protected ByteBuffer reserved3;
-	@Getter protected long timestamp;
 	@Getter protected int packetType;
 	@Getter protected ByteBuffer reserved4;
+	
+	/*
+	@Getter @Setter protected MACAddress site;
+	@Getter protected long timestamp;
+	*/
 	
 	/**
 	 * Creates an empty packet, setting some default values via
@@ -76,23 +97,54 @@ public abstract class Packet {
 		preambleDefaults();
 	}
 	
+	public void setTagged(boolean value)
+	{
+		this.tagged	= value;
+	}
+	
+	public MACAddress getBulbAddress()
+	{
+		return this.target;
+	}
+	
+	public void setBulbAddress(MACAddress value)
+	{
+		this.target	= value;
+	}
+	
+	public MACAddress getSite()
+	{
+		return this.target;
+	}
+	
+	public void setSite(MACAddress value)
+	{
+		this.target	= value;
+	}
+	
 	/**
 	 * Parses, in order, the defined preamble fields, storing collected values.
 	 * The buffer's position will be left at the end of the parsed fields and
 	 * should be equal to the value returned by {@link #preambleLength()}.
 	 * @param bytes the buffer to read from.
 	 */
-	protected void parsePreamble(ByteBuffer bytes) {
+	protected void parsePreamble(ByteBuffer bytes) 
+	{
 		size        = FIELD_SIZE        .value(bytes);
 		protocol    = FIELD_PROTOCOL    .value(bytes);
+		source		= FIELD_SOURCE		.value(bytes);
+		target		= FIELD_TARGET		.value(bytes);
 		reserved1   = FIELD_RESERVED_1  .value(bytes);
-		bulbAddress = FIELD_BULB_ADDRESS.value(bytes);
-		reserved2   = FIELD_RESERVED_2  .value(bytes);
-		site        = FIELD_SITE        .value(bytes);
+		
+		int ackReserve	= FIELD_ACK_RESERVED.value(bytes);
+		this.ack_required	= (ackReserve & 0x2) > 0;
+		this.res_required	= (ackReserve & 0x1) > 0;
+		
+		this.sequence		= FIELD_SEQUENCE.value(bytes);
+		
 		reserved3   = FIELD_RESERVED_3  .value(bytes);
-		timestamp   = FIELD_TIMESTAMP   .value(bytes);
 		packetType  = FIELD_PACKET_TYPE .value(bytes);
-		reserved4   = FIELD_RESERVED_4  .value(bytes);
+		reserved4   = FIELD_RESERVED_4  .value(bytes);		
 	}
 	
 	/**
@@ -100,14 +152,16 @@ public abstract class Packet {
 	 * lengths of all defined fields (see {@link #PREAMBLE_FIELDS}).
 	 * @return the sum of the length of preamble fields
 	 */
-	protected int preambleLength() {
-		int sum = 0;
-		
-		for (Field f : PREAMBLE_FIELDS) {
-			sum += f.getLength();
-		}
-		
-		return sum;
+	protected int preambleLength() 
+	{
+		return 36; // 288 bits
+//		int sum = 0;
+//		
+//		for (Field f : PREAMBLE_FIELDS) {
+//			sum += f.getLength();
+//		}
+//		
+//		return sum;
 	}
 	
 	/**
@@ -128,18 +182,46 @@ public abstract class Packet {
 	 * variables or by overriding {@link #preambleDefaults()}.
 	 * @return a new buffer containing the encoded preamble
 	 */
-	protected ByteBuffer preambleBytes() {
-		return ByteBuffer.allocate(preambleLength())
-				.put(FIELD_SIZE.bytes(length()))
-				.put(FIELD_PROTOCOL.bytes(protocol))
-				.put(ByteBuffer.allocate(FIELD_RESERVED_1.getLength()))   // empty
-				.put(FIELD_BULB_ADDRESS.bytes(bulbAddress))
-				.put(ByteBuffer.allocate(FIELD_RESERVED_2.getLength()))  // empty
-				.put(FIELD_SITE.bytes(site))
-				.put(ByteBuffer.allocate(FIELD_RESERVED_3.getLength()))  // empty
-				.put(FIELD_TIMESTAMP.bytes(timestamp))
-				.put(FIELD_PACKET_TYPE.bytes(packetType()))
-				.put(ByteBuffer.allocate(FIELD_RESERVED_4.getLength())); // empty
+	protected ByteBuffer preambleBytes() 
+	{
+		ByteBuffer buffer	= ByteBuffer.allocate(preambleLength());
+		
+		// Frame
+		buffer.put(FIELD_SIZE.bytes(length()));
+		int protocol	= 0;
+		
+		if (tagged)
+			protocol |= 1 << 13;
+		
+		if (this.addressable)
+			protocol |= 1 << 12;
+		
+		protocol |= this.protocol;
+		
+		buffer.put(FIELD_PROTOCOL.bytes(protocol));
+		buffer.put(FIELD_SOURCE.bytes(this.source));
+		
+		// Frame Address
+		buffer.put(FIELD_TARGET.bytes(this.target));
+		buffer.put(ByteBuffer.allocate(6)); // Reserved
+		
+		int ackReserve	= 0;
+		
+		if (this.ack_required)
+			ackReserve |= 1 << 1;
+		
+		if (this.res_required)
+			ackReserve	|= 1;
+		
+		buffer.put(FIELD_ACK_RESERVED.bytes(ackReserve));
+		buffer.put(FIELD_SEQUENCE.bytes(this.sequence));
+				
+		// Protocol Header
+		buffer.put(ByteBuffer.allocate(8));	// Reserved
+		buffer.put(FIELD_PACKET_TYPE.bytes(packetType()));
+		buffer.put(ByteBuffer.allocate(2));	// Reserved
+		
+		return buffer;
 	}
 	
 	/**
@@ -149,12 +231,10 @@ public abstract class Packet {
 	 * during initialization.
 	 */
 	protected void preambleDefaults() {
-		size = 0; // not used when sending
-		protocol = 13312; // ?
-		bulbAddress = new MACAddress();
-		site = new MACAddress();
-		timestamp = 0;
-		packetType = packetType();
+		size		= 0; // not used when sending
+		protocol	= 1024; // ?
+		target		= new MACAddress();
+		packetType	= packetType();
 	}
 	
 	/**

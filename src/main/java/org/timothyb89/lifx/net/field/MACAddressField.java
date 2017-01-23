@@ -9,12 +9,12 @@ import java.nio.ByteBuffer;
 public class MACAddressField extends Field<MACAddress> {
 
 	public MACAddressField() {
-		super(6);
+		super(8);
 	}
 
 	@Override
 	public int defaultLength() {
-		return 6;
+		return 8;
 	}
 
 	@Override

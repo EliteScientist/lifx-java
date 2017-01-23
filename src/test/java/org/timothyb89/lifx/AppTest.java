@@ -3,6 +3,7 @@ package org.timothyb89.lifx;
 import junit.framework.Test;
 import junit.framework.TestCase;
 import junit.framework.TestSuite;
+import org.timothyb89.lifx.net.BroadcastListener;
 
 /**
  * Unit test for simple App.
